@@ -1,6 +1,7 @@
 import streamlit as st
 import numpy as np
 import pickle
+import pandas as pd
 
 # ---------------------------
 # Load model and scaler
@@ -8,8 +9,7 @@ import pickle
 with open("best_model.pkl", "rb") as f:
     model = pickle.load(f)
 
-with open("scaler.pkl", "rb") as f:
-    scaler = pickle.load(f)
+
 
 # ---------------------------
 # App Config
@@ -89,24 +89,54 @@ thal = ["Normal",
 # Prediction
 # ---------------------------
 
-input_data = np.array([[age, sex, cp, trestbps, chol, fbs,
-                        restecg, thalach, exang, oldpeak,
-                        slope, ca, thal]])
+feature_names = [
+    'age', 'sex', 'cp', 'trestbps', 'chol', 'fbs',
+    'restecg', 'thalach', 'exang', 'oldpeak',
+    'slope', 'ca', 'thal'
+]
 
-# Scale only continuous features (same as training)
-input_data_scaled = scaler.transform(input_data)
+input_data = pd.DataFrame(
+    [[age, sex, cp, trestbps, chol, fbs,
+      restecg, thalach, exang, oldpeak,
+      slope, ca, thal]],
+    columns=feature_names
+)
+
+input_data_scaled = input_data
 
 if st.button("🔍 Predict"):
+
     prediction = model.predict(input_data_scaled)[0]
-    proba = model.predict_proba(input_data_scaled)[0]
+
+    probabilities = model.predict_proba(input_data_scaled)[0]
+
+    classes = list(model.classes_)
+
+    disease_probability = probabilities[classes.index(1)]
+    no_disease_probability = probabilities[classes.index(0)]
 
     st.subheader("📊 Prediction Result")
+
     if prediction == 1:
-        st.error(f"⚠️ High risk of Heart Disease "
-                 f"(Probability: {proba[1]*100:.2f}%)")
+        st.error(
+            f"⚠️ High risk of Heart Disease "
+            f"(Model Probability: {disease_probability*100:.2f}%)"
+        )
     else:
-        st.success(f"✅ Low risk of Heart Disease "
-                   f"(Probability: {proba[0]*100:.2f}%)")
+        st.success(
+            f"✅ Low risk of Heart Disease "
+            f"(Model Probability: {no_disease_probability*100:.2f}%)"
+        )
+
+    st.write("### Probability Breakdown")
+
+    st.write(
+        f"No Heart Disease: {no_disease_probability*100:.2f}%"
+    )
+
+    st.write(
+        f"Heart Disease: {disease_probability*100:.2f}%"
+    )
 
 # ---------------------------
 # Footer
